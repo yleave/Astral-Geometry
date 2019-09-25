@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas</title>
+    <style>
+        body{
+            width: 100%;
+            height: 1000px;
+            background: linear-gradient(to bottom right, #000, #2073c2 60%, #dff6ff);
+            overflow: hidden;
+        }
+        span{
+            display: block;
+            position: absolute;
+            border-radius: 50%;
+            box-shadow: 0.4px 0.4px 0.4px 0px #fff;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    var colorArr = ['#1cf3ff','skyblue','orange'];
+    window.onload = function(){
+        var screenW = document.documentElement.clientWidth;
+        var screenH = document.documentElement.clientHeight;
+        console.log(screenW);
+        for( var i=0; i<800; i++ ){
+            var span = document.createElement('span');
+            var width = Math.random() * 3;
+            var colorIndex = parseInt(Math.random() * 3);
+            var x = parseInt(Math.random() * screenW);
+            var y = parseInt(Math.random() * screenH);
+            span.style.width = parseInt(width) + 'px';
+            span.style.height = parseInt(width) + 'px';
+            span.style.background = colorArr[colorIndex];
+            span.style.left = x + 'px';
+            span.style.top = y + 'px';
+
+            document.body.appendChild(span);
+        }
+    }
+
+    //全局参数
+    var BACKGRAND_COLOR = 'rgb(8,11,95)';   //背景色
+    var POINT_NUM = 150;    //随机点的数量
+    var POINT_COLOR = 'rgba(9,255,22,0.7)'; //点的颜色及透明度
+    var LINE_LENGTH = 10000;    //点与点之间的连线长度的平方（便于计算）
+
+    var csv = document.createElement('canvas');
+    csv.width = window.innerWidth;
+    csv.height = window.innerHeight;
+
+    document.body.appendChild(csv);
+
+    var ctx = csv.getContext('2d');
+
+    //随机函数
+    function randomInt(min,max) {
+        return Math.floor((max - min + 1) * Math.random() + min);
+    }
+    
+    function randomFloat(min,max) {
+        return (max - min) * Math.random() + min;
+    }
+
+    //构造点类
+    function Point(){
+        this.x = randomFloat(0,csv.width);
+        this.y = randomFloat(0,csv.height);
+
+        if(arguments.length != 0){
+            this.x = arguments[0];
+            this.y = arguments[1];
+        }
+
+        this.r = 1.5;   //小点半径
+
+        var speed  = randomFloat(0.3,1.2);  //点的移动速度
+        var angle = randomFloat(0,2 * Math.PI);  //点的移动方向角度
+
+        //点在某方向上的水平移动速度
+        this.dx = Math.sin(angle) * speed;
+        //点在某方向上的竖直移动速度
+        this.dy = Math.cos(angle) * speed;
+
+        var i = randomInt(0,2);
+        this.color = colorArr[i];
+    }
+
+    //点移动方法，若点超出屏幕边界，则向相反方向移动
+    Point.prototype.move = function () {
+        this.x += this.dx;
+        this.y += this.dy;
+        if(this.x < 0){
+            this.x = 0;
+            this.dx = -this.dx;
+        }else if(this.x > csv.width){
+            this.x = csv.width;
+            this.dx = - this.dx;
+        }
+        if(this.y < 0){
+            this.y = 0;
+            this.dy = -this.dy;
+        }else if(this.y > csv.height){
+            this.y = csv.height;
+            this.dy = -this.dy;
+        }
+    }
+
+    //绘点
+    Point.prototype.draw = function () {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.r,0,2 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    var points = [];
+
+    //初始化点集
+    function initPoints(num) {
+        for(var i = 0; i < num; i++){
+            points.push(new Point());
+        }
+    }
+
+    var p0 = new Point();   //鼠标所在点
+    p0.dx = p0.dy = 0;
+
+    //获取鼠标当前坐标
+    document.onmousemove = function (ev) {
+        p0.x = ev.clientX;
+        p0.y = ev.clientY;
+    }
+    document.onmousedown = function (ev) {
+        p0.x = ev.clientX;
+        p0.y = ev.clientY;
+
+
+        for(var i = 0; i < 3; i++){
+           var p = new Point();
+           p.draw();
+           p.move();
+        }
+    }
+    document.onmouseup = function (ev) {
+        degree = 2.5;
+        p0.x = ev.clientX;
+        p0.y = ev.clientY;
+    }
+    window.onmouseout = function () {
+        p0.x = null;
+        p0.y = null;
+    }
+
+
+
+    function drawLine(p1,p2) {
+        var dx = p1.x - p2.x;
+        var dy = p1.y - p2.y;
+        var dis = dx * dx + dy * dy;    //两点之间的距离公式,三角形的斜边(平方)
+        if(dis < 2 * LINE_LENGTH){  //当两点之间的距离小于给定的长度，绘制两点之间的连线且连线透明度根据距离而变化
+            if(dis > LINE_LENGTH){  //吸引 length ~ 2 * length 范围内的点,对于小于 length 的点，使其自由移动
+                if(p1 === p0){
+                    p2.x += dx * 0.03;
+                    p2.y += dy * 0.03;
+                }
+            }
+            // (1 - dis/length) 的范围为(-1,1)，因此透明度 t 的范围在 (-0.2,0.2) 之间，且透明度根据两点之间的距离而改变
+            var t = (1.05 - dis / LINE_LENGTH) * 0.2;
+            ctx.strokeStyle = 'rgba(255,255,255,'  + t + ')';
+            ctx.beginPath();
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(p1.x,p1.y);
+            ctx.lineTo(p2.x,p2.y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+        return;
+    }
+
+    //绘制每一帧
+    function drawFrame() {
+        csv.width = window.innerWidth;
+        csv.height = window.innerHeight;
+
+        var arr = (p0.x === null? points:[p0].concat(points));
+        for(var i = 0; i < arr.length; i++){
+            for(var j = i + 1; j < arr.length; j++){
+                // if(j == i){
+                //     continue;
+                // }
+                drawLine(arr[i],arr[j]);
+            }
+            arr[i].draw();
+            arr[i].move();
+        }
+
+        window.requestAnimationFrame(drawFrame);
+    }
+
+    initPoints(POINT_NUM);
+    drawFrame();
+
+</script>
+
+</body>
+
+</html>
