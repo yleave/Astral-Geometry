@@ -43,7 +43,6 @@
     }
 
     //全局参数
-    var BACKGRAND_COLOR = 'rgb(8,11,95)';   //背景色
     var POINT_NUM = 150;    //随机点的数量
     var POINT_COLOR = 'rgba(9,255,22,0.7)'; //点的颜色及透明度
     var LINE_LENGTH = 10000;    //点与点之间的连线长度的平方（便于计算）
@@ -138,13 +137,6 @@
     document.onmousedown = function (ev) {
         p0.x = ev.clientX;
         p0.y = ev.clientY;
-
-
-        for(var i = 0; i < 3; i++){
-           var p = new Point();
-           p.draw();
-           p.move();
-        }
     }
     document.onmouseup = function (ev) {
         degree = 2.5;
